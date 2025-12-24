@@ -87,6 +87,10 @@ describe('Dashboard Module Tests', () => {
     await pages.dashboard.navigateToLeave();
     await pages.leave.waitForUrlContains('leave');
 
+    // Add delay to allow page to fully load
+    const { CommonUtils } = await import('../utils/common-utils.js');
+    await CommonUtils.delay(2000, 'Wait for Leave page to load');
+
     const isLeavePageDisplayed = await pages.leave.isLeavePageDisplayed();
     expect(isLeavePageDisplayed).toBe(true);
   });
@@ -97,6 +101,10 @@ describe('Dashboard Module Tests', () => {
 
     await pages.dashboard.navigateToTime();
     await pages.time.waitForUrlContains('time');
+
+    // Add delay to allow page to fully load
+    const { CommonUtils } = await import('../utils/common-utils.js');
+    await CommonUtils.delay(2000, 'Wait for Time page to load');
 
     const isTimePageDisplayed = await pages.time.isTimePageDisplayed();
     expect(isTimePageDisplayed).toBe(true);
