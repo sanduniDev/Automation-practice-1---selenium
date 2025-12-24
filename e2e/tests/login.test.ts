@@ -9,6 +9,7 @@ import { TestHelpers } from '../helpers/test-helpers.js';
 import { TestContext } from '../types/test-context.js';
 import { BrowserTypes } from '../service/definitions/browser-types.js';
 import { TestConfig } from '../config/test-config.js';
+import { CommonUtils } from '../utils/common-utils.js';
 
 describe('Login Module Tests', () => {
   let testContext: TestContext;
@@ -41,7 +42,7 @@ describe('Login Module Tests', () => {
       if (isLoggedIn) {
         console.log('🚪 User is logged in, logging out...');
         await pages.dashboard.logout();
-        await pages.login.sleep(2000);
+        await CommonUtils.delay(2000, 'After logout');
       }
     } catch (error) {
       // User is not logged in, continue
