@@ -13,6 +13,7 @@ import { TimePage } from './time.page';
 import { RecruitmentPage } from './recruitment.page';
 import { MyInfoPage } from './myinfo.page';
 import { PerformancePage } from './performance.page';
+import { LeftMenuPage } from './left-menu.page';
 
 export class Pages {
   public login: LoginPage;
@@ -24,6 +25,7 @@ export class Pages {
   public recruitment: RecruitmentPage;
   public myInfo: MyInfoPage;
   public performance: PerformancePage;
+  public leftMenu: LeftMenuPage;
 
   constructor(driver: WebDriver, sessionName: string) {
     // Initialize all page objects
@@ -36,5 +38,6 @@ export class Pages {
     this.recruitment = new RecruitmentPage(driver, sessionName, this);
     this.myInfo = new MyInfoPage(driver, sessionName, this);
     this.performance = new PerformancePage(driver, sessionName, this);
+    this.leftMenu = new LeftMenuPage(driver, sessionName, this);
   }
 }
