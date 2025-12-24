@@ -6,6 +6,8 @@
 import { By } from 'selenium-webdriver';
 import { BasePage } from './base.page';
 import { TestElement } from '../types/test-element';
+import { CommonUtils } from '../utils/common-utils';
+import { waitForElement } from '../utils/selenium-utils';
 
 export class AdminPage extends BasePage {
   // ============= PAGE ELEMENTS =============
@@ -91,7 +93,7 @@ export class AdminPage extends BasePage {
   };
 
   public readonly employeeNameFormInput: TestElement = {
-    locator: By.xpath('//label[text()="Employee Name"]/parent::div/following-sibling::div/input'),
+    locator: By.xpath('//label[text()="Employee Name"]/parent::div/following-sibling::div//input'),
     label: 'Employee Name Form Input',
   };
 
@@ -127,13 +129,18 @@ export class AdminPage extends BasePage {
 
   // Results Table
   public readonly recordsFoundText: TestElement = {
-    locator: By.xpath('//span[contains(text(), "Record")]'),
+    locator: By.xpath('//span[contains(text(), "Record") or contains(text(), "Found") or contains(text(), "record")]'),
     label: 'Records Found Text',
   };
 
   public readonly firstDeleteButton: TestElement = {
-    locator: By.xpath('(//button[contains(@class, "oxd-icon-button")]//i[contains(@class, "trash")])[1]'),
+    locator: By.xpath('(//div[@role="table"]//div[@role="row"][2]//i[contains(@class, "bi-trash")])[1]'),
     label: 'First Delete Button',
+  };
+
+  public readonly firstEditButton: TestElement = {
+    locator: By.xpath('(//button[contains(@class, "oxd-icon-button")]//i[contains(@class, "bi-pencil-fill")])[1]'),
+    label: 'First Edit Button',
   };
 
   public readonly confirmDeleteButton: TestElement = {
@@ -192,14 +199,18 @@ export class AdminPage extends BasePage {
    */
   async selectEmployee(employeeName: string): Promise<void> {
     console.log(`👥 ${this.sessionName} Typing employee name: ${employeeName}`);
-    await this.typeAfterWaitForElement(this.employeeNameFormInput, employeeName);
-    await this.sleep(2000); // Wait for autocomplete
+
+    // Wait for the employee name field to be ready
+    await CommonUtils.delay(500, 'Wait for employee field to be ready');
+
+    await this.typeAfterWaitForElement(this.employeeNameFormInput, employeeName, 3, 2000);
+    await CommonUtils.delay(3000, 'Wait for autocomplete to appear');
 
     const firstOption: TestElement = {
       locator: By.xpath('//div[@role="option"][1]'),
       label: 'First Employee Option',
     };
-    await this.clickAfterWaitForElement(firstOption);
+    await this.clickAfterWaitForElement(firstOption, 3, 2000);
   }
 
   /**
@@ -209,8 +220,14 @@ export class AdminPage extends BasePage {
     console.log(`👤 ${this.sessionName} Creating new user: ${username}`);
 
     await this.selectUserRole(userRole);
+    await CommonUtils.delay(2000, 'Wait after role selection for form to update');
+
     await this.selectEmployee(employeeName);
+    await CommonUtils.delay(1000, 'Wait after employee selection');
+
     await this.selectStatus(status);
+    await CommonUtils.delay(1000, 'Wait after status selection');
+
     await this.typeAfterWaitForElement(this.usernameFormInput, username);
     await this.typeAfterWaitForElement(this.passwordFormInput, password);
     await this.typeAfterWaitForElement(this.confirmPasswordFormInput, password);
@@ -220,13 +237,84 @@ export class AdminPage extends BasePage {
   }
 
   /**
+   * Click edit button for the first user in search results
+   */
+  async clickEditFirstUser(): Promise<void> {
+    console.log(`✏️ ${this.sessionName} Clicking edit for first user`);
+    await this.clickAfterWaitForElement(this.firstEditButton);
+    await CommonUtils.delay(1000, 'Wait for edit form to load');
+  }
+
+  /**
+   * Update user information
+   */
+  async updateUser(userRole?: string, employeeName?: string, status?: string, username?: string, password?: string): Promise<void> {
+    console.log(`📝 ${this.sessionName} Updating user information`);
+
+    if (userRole) {
+      await this.selectUserRole(userRole);
+    }
+
+    if (employeeName) {
+      await this.clearAndTypeAfterWaitForElement(this.employeeNameFormInput, employeeName);
+      await CommonUtils.delay(2000, 'Wait for autocomplete');
+      const firstOption: TestElement = {
+        locator: By.xpath('//div[@role="option"][1]'),
+        label: 'First Employee Option',
+      };
+      await this.clickAfterWaitForElement(firstOption);
+    }
+
+    if (status) {
+      await this.selectStatus(status);
+    }
+
+    if (username) {
+      await this.clearAndTypeAfterWaitForElement(this.usernameFormInput, username);
+    }
+
+    if (password) {
+      await this.typeAfterWaitForElement(this.passwordFormInput, password);
+      await this.typeAfterWaitForElement(this.confirmPasswordFormInput, password);
+    }
+
+    await this.clickAfterWaitForElement(this.saveButton);
+    console.log(`✅ ${this.sessionName} User update submitted`);
+  }
+
+  /**
    * Delete first user from search results
    */
   async deleteFirstUser(): Promise<void> {
     console.log(`🗑️ ${this.sessionName} Deleting first user`);
-    await this.clickAfterWaitForElement(this.firstDeleteButton);
-    await this.clickAfterWaitForElement(this.confirmDeleteButton);
+
+    // Scroll to ensure the table is visible
+    try {
+      const tableElement: TestElement = {
+        locator: By.xpath('//div[@role="table"]'),
+        label: 'Admin Results Table',
+      };
+      await this.scrollElementIntoView(tableElement);
+      await CommonUtils.delay(1000, 'Wait after scroll to table');
+    } catch (error) {
+      console.log(`⚠️ ${this.sessionName} Could not scroll to table`);
+    }
+
+    await this.clickAfterWaitForElement(this.firstDeleteButton, 3, 2000);
+    await CommonUtils.delay(500, 'Wait for delete confirmation dialog');
+    await this.clickAfterWaitForElement(this.confirmDeleteButton, 3, 2000);
     console.log(`✅ ${this.sessionName} User deletion confirmed`);
+  }
+
+  /**
+   * Delete user by username
+   */
+  async deleteUserByUsername(username: string): Promise<void> {
+    console.log(`🗑️ ${this.sessionName} Deleting user: ${username}`);
+    await this.searchUserByUsername(username);
+    await CommonUtils.delay(2000, 'Wait for search results');
+    await this.deleteFirstUser();
+    await CommonUtils.delay(2000, 'Wait for deletion to complete');
   }
 
   /**
@@ -252,17 +340,70 @@ export class AdminPage extends BasePage {
    */
   async getRecordsCount(): Promise<string> {
     console.log(`📊 ${this.sessionName} Getting records count`);
-    return await this.extractTextAfterWaitForElement(this.recordsFoundText);
+    // Wait for the page to load
+    await CommonUtils.delay(1500, 'Wait for page to load');
+
+    // Scroll to ensure records are visible
+    try {
+      const tableElement: TestElement = {
+        locator: By.xpath('//div[@role="table"]'),
+        label: 'Admin Table',
+      };
+      await this.scrollElementIntoView(tableElement);
+      await CommonUtils.delay(500, 'Wait after scroll');
+    } catch (error) {
+      console.log(`⚠️ ${this.sessionName} Could not scroll to table, continuing anyway`);
+    }
+
+    // Use longer timeout and more retries for records count
+    return await this.extractTextAfterWaitForElement(this.recordsFoundText, 3, 2500);
   }
 
   /**
    * Verify user exists in search results
    */
   async isUserInResults(username: string): Promise<boolean> {
-    const userElement: TestElement = {
-      locator: By.xpath(`//div[contains(@class, "oxd-table-cell") and text()="${username}"]`),
-      label: `User ${username} in results`,
-    };
-    return await this.isElementPresent(userElement);
+    try {
+      // Wait for the page to load
+      await CommonUtils.delay(1000, 'Wait for search results to render');
+
+      // Scroll to ensure table is visible
+      try {
+        const tableElement: TestElement = {
+          locator: By.xpath('//div[@role="table"]'),
+          label: 'Admin Results Table',
+        };
+        await this.scrollElementIntoView(tableElement);
+        await CommonUtils.delay(500, 'Wait after scroll');
+      } catch (scrollError) {
+        console.log(`⚠️ ${this.sessionName} Could not scroll to table, continuing anyway`);
+      }
+
+      const userLocator = By.xpath(`//div[@role="row"]//div[contains(@class, "oxd-table-cell") and contains(text(), "${username}")]`);
+
+      // Use waitForElement with increased timeout and retries
+      await waitForElement(this.driver, userLocator, 3, 2500);
+      console.log(`✅ ${this.sessionName} User found in results: ${username}`);
+      return true;
+    } catch (error) {
+      console.log(`❌ ${this.sessionName} User not found in results: ${username}`);
+      return false;
+    }
+  }
+
+  /**
+   * Check if results table is present
+   */
+  async isResultsTablePresent(): Promise<boolean> {
+    try {
+      const tableElement: TestElement = {
+        locator: By.xpath('//div[@role="table"]'),
+        label: 'Results Table',
+      };
+      return await this.isElementPresent(tableElement);
+    } catch (error) {
+      console.log(`❌ ${this.sessionName} Results table not found`);
+      return false;
+    }
   }
 }
